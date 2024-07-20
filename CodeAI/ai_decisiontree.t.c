@@ -11,6 +11,24 @@
     ai_decision_tree_branch_t ai_DecisionTreeBranch_Action_##n; \
     ai_decision_tree_branch_action(&ai_DecisionTreeBranch_Action_##n, #n, init, update, cleanup, 0)
 
+#define AI_DecisionTree_AddEvaluator(T, n, fn) \
+    AI_DecisionTreeBranch_Evaluator(n, fn); \
+    ai_decision_tree_set_branch(&T, &ai_DecisionTreeBranch_Evaluator_##n)
+
+#define AI_DecisionTreeBranch_AddEvaluator(P, C, fn) \
+    AI_DecisionTreeBranch_Evaluator(C, fn);      \
+    ai_decision_tree_branch_append_child(&ai_DecisionTreeBranch_Evaluator_##P, &ai_DecisionTreeBranch_Evaluator_##C)
+    
+
+#define AI_DecisionTreeBranch_AddAction(P, n, init, update, cleanup) \
+    AI_DecisionTreeBranch_Action(n, init, update, cleanup);          \
+    ai_decision_tree_branch_append_child(&ai_DecisionTreeBranch_Evaluator_##P, &ai_DecisionTreeBranch_Action_##n);
+
+
+////////////////////////////////////////////////////////////////////////////////
+////
+
+
 int range_rand(int min, int max){
     return  rand() % (max - min + 1) + min;
 }
@@ -53,48 +71,32 @@ int main(int argc, char** argv)
     ai_decision_tree_init(&tree);
     
     
-    AI_DecisionTreeBranch_Evaluator(is_alive, Evaluator_Random);
+    AI_DecisionTree_AddEvaluator(tree, is_alive, Evaluator_Random);
     
+    AI_DecisionTreeBranch_AddEvaluator(is_alive, has_critical_health, Evaluator_Random);
+    AI_DecisionTreeBranch_AddAction(is_alive, die, Action_Initialize, Action_Update, Action_Exit);
     
-    ai_decision_tree_set_branch(&tree, &ai_DecisionTreeBranch_Evaluator_is_alive);
+    AI_DecisionTreeBranch_AddEvaluator(has_critical_health, has_move_position, Evaluator_Random);
+    AI_DecisionTreeBranch_AddEvaluator(has_critical_health, has_enemy, Evaluator_Random);
     
-    AI_DecisionTreeBranch_Evaluator(has_critical_health, Evaluator_Random);
-    AI_DecisionTreeBranch_Action(die, Action_Initialize, Action_Update, Action_Exit);
+    AI_DecisionTreeBranch_AddAction(has_move_position, move_to_position, Action_Initialize, Action_Update, Action_Cleanup);
+    AI_DecisionTreeBranch_AddAction(has_move_position, flee, Action_Initialize, Action_Update, Action_Cleanup);
     
-    ai_decision_tree_branch_append_child(&ai_DecisionTreeBranch_Evaluator_is_alive, &ai_DecisionTreeBranch_Evaluator_has_critical_health);
-    ai_decision_tree_branch_append_child(&ai_DecisionTreeBranch_Evaluator_is_alive, &ai_DecisionTreeBranch_Action_die);
+    AI_DecisionTreeBranch_AddEvaluator(has_enemy, has_ammo, Evaluator_Random);
+    AI_DecisionTreeBranch_AddEvaluator(has_enemy, has_move_position2, Evaluator_Random);
     
-    AI_DecisionTreeBranch_Evaluator(has_move_position, Evaluator_Random);
-    AI_DecisionTreeBranch_Evaluator(has_enemy, Evaluator_Random);
+    AI_DecisionTreeBranch_AddEvaluator(has_ammo, can_shoot_enemy, Evaluator_Random);
+    AI_DecisionTreeBranch_AddAction(has_ammo, reload, Action_Initialize, Action_Update, Action_Cleanup);
     
-    ai_decision_tree_branch_append_child(&ai_DecisionTreeBranch_Evaluator_has_critical_health, &ai_DecisionTreeBranch_Evaluator_has_move_position);
-    ai_decision_tree_branch_append_child(&ai_DecisionTreeBranch_Evaluator_has_critical_health, &ai_DecisionTreeBranch_Evaluator_has_enemy);
+    AI_DecisionTreeBranch_AddAction(can_shoot_enemy, shoot, Action_Initialize, Action_Update, Action_Cleanup);
+    AI_DecisionTreeBranch_AddAction(can_shoot_enemy, pursue, Action_Initialize, Action_Update, Action_Cleanup);
     
-    AI_DecisionTreeBranch_Action(move_to_position, Action_Initialize, Action_Update, Action_Cleanup);
-    AI_DecisionTreeBranch_Action(flee, Action_Initialize, Action_Update, Action_Cleanup);
+    AI_DecisionTreeBranch_AddAction(has_move_position2, move_to_position2, Action_Initialize, Action_Update, Action_Cleanup);
+    AI_DecisionTreeBranch_AddEvaluator(has_move_position2, 50_50_chance, Evaluator_Random);
     
-    ai_decision_tree_branch_append_child(&ai_DecisionTreeBranch_Evaluator_has_move_position, &ai_DecisionTreeBranch_Action_move_to_position);
-    ai_decision_tree_branch_append_child(&ai_DecisionTreeBranch_Evaluator_has_move_position, &ai_DecisionTreeBranch_Action_flee);
+    AI_DecisionTreeBranch_AddAction(50_50_chance, random_move, Action_Initialize, Action_Update, Action_Cleanup);
+    AI_DecisionTreeBranch_AddAction(50_50_chance, idle, Action_Initialize, Action_Update, Action_Cleanup);
     
-    AI_DecisionTreeBranch_Evaluator(has_ammo, Evaluator_Random);
-    ai_decision_tree_branch_append_child(&ai_DecisionTreeBranch_Evaluator_has_enemy, &ai_DecisionTreeBranch_Evaluator_has_ammo);
-    ai_decision_tree_branch_append_child(&ai_DecisionTreeBranch_Evaluator_has_enemy, &ai_DecisionTreeBranch_Evaluator_has_move_position);
-    
-    AI_DecisionTreeBranch_Evaluator(can_shoot_enemy, Evaluator_Random);
-    AI_DecisionTreeBranch_Evaluator(50_50_chance, Evaluator_Random);
-    AI_DecisionTreeBranch_Action(reload, Action_Initialize, Action_Update, Action_Cleanup);
-    AI_DecisionTreeBranch_Action(shoot, Action_Initialize, Action_Update, Action_Cleanup);
-    AI_DecisionTreeBranch_Action(pursue, Action_Initialize, Action_Update, Action_Cleanup);
-    AI_DecisionTreeBranch_Action(random_move, Action_Initialize, Action_Update, Action_Cleanup);
-    AI_DecisionTreeBranch_Action(idle, Action_Initialize, Action_Update, Action_Cleanup);
-    
-    ai_decision_tree_branch_append_child(&ai_DecisionTreeBranch_Evaluator_has_ammo, &ai_DecisionTreeBranch_Evaluator_can_shoot_enemy);
-    ai_decision_tree_branch_append_child(&ai_DecisionTreeBranch_Evaluator_has_ammo, &ai_DecisionTreeBranch_Action_reload);
-    ai_decision_tree_branch_append_child(&ai_DecisionTreeBranch_Evaluator_can_shoot_enemy, &ai_DecisionTreeBranch_Action_shoot);
-    ai_decision_tree_branch_append_child(&ai_DecisionTreeBranch_Evaluator_can_shoot_enemy, &ai_DecisionTreeBranch_Action_pursue);
-    ai_decision_tree_branch_append_child(&ai_DecisionTreeBranch_Evaluator_50_50_chance, &ai_DecisionTreeBranch_Action_random_move);
-    ai_decision_tree_branch_append_child(&ai_DecisionTreeBranch_Evaluator_50_50_chance, &ai_DecisionTreeBranch_Action_idle);
-    ai_decision_tree_branch_append_child(&ai_DecisionTreeBranch_Evaluator_has_move_position, &ai_DecisionTreeBranch_Evaluator_50_50_chance);
     
     while(1){
         ai_decision_tree_update(&tree, 0);
