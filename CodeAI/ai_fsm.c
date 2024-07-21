@@ -117,14 +117,16 @@ void ai_fsm_update(ai_fsm_t* fsm, void* userdata){
             
             const char* to_state_name = ai_fsm__evaluate_transitions(fsm, &fsm->current_state->transitions, userdata);
             if(to_state_name){
-                ai_fsm_set_state(fsm, to_state_name);
-                ai_action_initialize(fsm->current_state->action, userdata);
+                if(ai_fsm_set_state(fsm, to_state_name)==0){
+                    ai_action_initialize(fsm->current_state->action, userdata);
+                }
             }
         }else if(status==kAI_ActionStatus_UNINITIALIZED){
             const char* to_state_name = ai_fsm__evaluate_transitions(fsm, &fsm->current_state->transitions, userdata);
             if(to_state_name){
-                ai_fsm_set_state(fsm, to_state_name);
-                ai_action_initialize(fsm->current_state->action, userdata);
+                if(ai_fsm_set_state(fsm, to_state_name)==0){
+                    ai_action_initialize(fsm->current_state->action, userdata);
+                }
             }
         }
     }
